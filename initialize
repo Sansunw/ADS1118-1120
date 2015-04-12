@@ -1,0 +1,97 @@
+/*=================================
+sEMG
+ADS:CS,SCLK,DIN,DOUT,DRDY;
+Arduino:8,9,10,11,12;
+
+===================================*/
+//
+//
+
+
+int CSPin = 8 ;
+int SCLKPin = 9 ;
+int DINPin = 10 ;
+int DOUTPin = 11 ;
+int DRDYPin = 12 ;
+
+
+void setup() {
+  
+  /* pinMode CS,SCLK,DIN,DOUT,DRDY;                  */
+  pinMode(CSPin,OUTPUT);
+  pinMode(SCLKPin,OUTPUT);
+  pinMode(DINPin,OUTPUT);
+  pinMode(DRDYPin,OUTPUT);
+  pinMode(DOUTPin,INPUT);
+  
+  //ADS1120_initialize(13)
+  
+  //1 Power-up
+  
+  //2 Delay;
+  delay(5);//500ms
+  //3 Configure the SPI interface of the microcontroller to SPI mode 1 (CPOL = 0, CPHA = 1);
+  
+  /*
+  //If the CS pin is not tied low permanently, configure the microcontroller GPIO connected to CS as an output;
+  //Configure the microcontroller GPIO connected to the DRDY pin as an interrupt input;
+  */
+  //4 Set CS to the device low;
+  digitalWrite(CSPin,LOW);
+  //5 Delay;
+  delay(5);
+  //6 Send the RESET command (06h) to make sure the device is properly reset after power-up;
+  
+  //7 Write the respective register configuration with the WREG command (43h, 08h, 04h, 10h, and 00h);
+  
+  //8 Delay;
+  delay(5);
+  //9 As a sanity check, read back all configuration registers with the RREG command (23h);
+  
+  //10 Delay;
+  delay(5);
+  //11 Send the START/SYNC command (08h) to start converting in continuous conversion mode;
+  
+  //12 Delay;
+  delay(5);
+ 
+  //13 Clear CS to high (resets the serial interface);
+
+
+
+  
+  Serial.begin(115200);
+
+ 
+}
+
+void loop()
+{ 
+  //Wait for DRDY to transition low;
+  
+  //Take CS low;
+  
+  //Delay;
+  delay(500);
+  //Send 16 SCLK rising edges to read out conversion data on DOUT;
+  
+  //Delay;
+  delay(500);
+  //Clear CS to high;
+ 
+  
+}
+
+
+
+  //Take CS low;
+  digitalWrite(CSPin,LOW);
+  //Delay;
+  delay(5);
+  //Send the POWERDOWN command (02h) to stop conversions and put the device in power-down mode;
+  
+  //Delay;
+  delay(5);
+  //Clear CS to high;
+  digitalWrite(CSPin,LOW);
+
