@@ -1,69 +1,40 @@
 /*=================================
 sEMG
-ADS:CS,SCLK,DIN,DOUT,DRDY;
-Arduino:8,9,10,11,12;
+ADS:AD_CSPin,AD_SCLKPin,AD_DINPin,AD_DOUTPin,AD_DRDYPin;
+Arduino:;
 
 ===================================*/
-//
-//
+
+int AD_CSPin = 10 ;
+int AD_SCLKPin = 13 ;
+int AD_DINPin = 11 ;
+int AD_DOUTPin = 12 ;
+int AD_DRDYPin = 8 ;
 
 
-int CSPin = 8 ;
-int SCLKPin = 9 ;
-int DINPin = 10 ;
-int DOUTPin = 11 ;
-int DRDYPin = 12 ;
+unsigned long AD_outputValue;        // value read from the pot
+unsigned long AD_inputValue ;        // value output to the PWM (analog out)
 
 
 void setup() {
   
   /* pinMode CS,SCLK,DIN,DOUT,DRDY;                  */
-  pinMode(CSPin,OUTPUT);
-  pinMode(SCLKPin,OUTPUT);
-  pinMode(DINPin,OUTPUT);
-  pinMode(DRDYPin,OUTPUT);
-  pinMode(DOUTPin,INPUT);
-  
-  //ADS1120_initialize(13)
-  
-  //1 Power-up
-  
-  //2 Delay;
-  delay(5);//500ms
-  //3 Configure the SPI interface of the microcontroller to SPI mode 1 (CPOL = 0, CPHA = 1);
-  
-  /*
-  //If the CS pin is not tied low permanently, configure the microcontroller GPIO connected to CS as an output;
-  //Configure the microcontroller GPIO connected to the DRDY pin as an interrupt input;
-  */
-  //4 Set CS to the device low;
-  digitalWrite(CSPin,LOW);
-  //5 Delay;
-  delay(5);
-  //6 Send the RESET command (06h) to make sure the device is properly reset after power-up;
-  
-  //7 Write the respective register configuration with the WREG command (43h, 08h, 04h, 10h, and 00h);
-  
-  //8 Delay;
-  delay(5);
-  //9 As a sanity check, read back all configuration registers with the RREG command (23h);
-  
-  //10 Delay;
-  delay(5);
-  //11 Send the START/SYNC command (08h) to start converting in continuous conversion mode;
-  
-  //12 Delay;
-  delay(5);
- 
-  //13 Clear CS to high (resets the serial interface);
+  pinMode(AD_CSPin,OUTPUT);
+  pinMode(AD_SCLKPin,OUTPUT);
+  pinMode(AD_DINPin,OUTPUT);
+  pinMode(AD_DOUTPin,INPUT);
+  pinMode(AD_DRDYPin,INPUT);
 
-
+  
+  
+  ADS1120Manager_initialize();
+  
 
   
   Serial.begin(115200);
 
  
-}
+}// end of setup
 
 void loop()
 { 
@@ -78,20 +49,76 @@ void loop()
   //Delay;
   delay(500);
   //Clear CS to high;
- 
+  digitalWrite(AD_CSPin,HIGH); 
   
-}
+}// end of loop
 
+void ADS1120Manager_initialize()
+{
+ 
+  //13)step
+  //1) Power-up
+  //2) Delay;
+  delay(5);//500ms
+  //3) Configure the SPI interface of the microcontroller to SPI mode 1 (CPOL = 0, CPHA = 1);
+  
+  /*
+  //If the CS pin is not tied low permanently, configure the microcontroller GPIO connected to CS as an output;
+  //Configure the microcontroller GPIO connected to the DRDY pin as an interrupt input;
+  */
+  //4) Set CS to the device low;
+  digitalWrite(AD_CSPin,LOW);
+  //5) Delay;
+  delay(5);
+  //6) Send the RESET command (06h) to make sure the device is properly reset after power-up;
+  AD_inputValue = B00000110;
+  analogWrite(AD_DINPin, AD_inputValue);
+  //7) Write the respective register configuration with the WREG command (43h, 08h, 04h, 10h, and 00h);
+    AD_inputValue = B01000011;//43h,beginWREG
+    analogWrite(AD_DINPin, AD_inputValue);
+    //00h
+    AD_inputValue = B10000000;//80h,AINp=AIN0,AINn=AVSS;
+    analogWrite(AD_DINPin, AD_inputValue);
+    //01h
+    AD_inputValue = B11010100;//d4h,2KSPS,Turbo mode,Continuous conversion mode;
+    analogWrite(AD_DINPin, AD_inputValue);
+    //02h
+    AD_inputValue = B00000000;//00h,Internal 2.048-V reference selected ,No 50-Hz or 60-Hz rejection
+    analogWrite(AD_DINPin, AD_inputValue);
+    //03h
+    AD_inputValue = B00000000;//00h,Only the dedicated DRDY pin is used to indicate when data are ready
+    analogWrite(AD_DINPin, AD_inputValue);
+  //8) Delay;
+  delay(5);
+  //9) As a sanity check, read back all configuration registers with the RREG command (23h);
+  AD_inputValue = B00100011;
+  analogWrite(AD_DINPin, AD_inputValue);
+  //10) Delay;
+  delay(5);
+  //11) Send the START/SYNC command (08h) to start converting in continuous conversion mode;
+  AD_inputValue = B00001000;
+  analogWrite(AD_DINPin, AD_inputValue);
+  //12) Delay;
+  delay(5);
+  //13) Clear CS to high (resets the serial interface);
+  digitalWrite(AD_CSPin,HIGH);
+  
+}// end of ADS1120Manager_initialize
 
-
+void ADS1120Manager_end()
+{
   //Take CS low;
-  digitalWrite(CSPin,LOW);
+  digitalWrite(AD_CSPin,LOW);
   //Delay;
   delay(5);
   //Send the POWERDOWN command (02h) to stop conversions and put the device in power-down mode;
-  
+  AD_inputValue = B00000010;
+  analogWrite(AD_DINPin, AD_inputValue);
   //Delay;
   delay(5);
   //Clear CS to high;
-  digitalWrite(CSPin,LOW);
+  digitalWrite(AD_CSPin,HIGH);
+}// end of ADS1120Manager_end
+
+
 
