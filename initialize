@@ -1,57 +1,81 @@
+
 /*=================================
 sEMG
-ADS:AD_CSPin,AD_SCLKPin,AD_DINPin,AD_DOUTPin,AD_DRDYPin;
+ADS:AD_CSPin,AD_SCLKPin,AD_MOSI,AD_MISO,AD_DRDYPin;
 Arduino:;
 
 ===================================*/
 
+#include <SPI.h>      // inslude the SPI library:
+
+
+
+
 int AD_CSPin = 10 ;
+int AD_MOSI = 11 ;   //int AD_DINPin = 11 ;
+int AD_MISO = 12 ;  // int AD_DOUTPin = 12 ;
 int AD_SCLKPin = 13 ;
-int AD_DINPin = 11 ;
-int AD_DOUTPin = 12 ;
+
+
 int AD_DRDYPin = 8 ;
 
 
-unsigned long AD_outputValue;        // value read from the pot
-unsigned long AD_inputValue ;        // value output to the PWM (analog out)
+unsigned long AD_MISOValue;        // value read from the pot
+unsigned long AD_MOSIValue ;        // value output to the PWM (analog out)
+
+boolean is_running = false;    // this flag is set in serialEvent on reciept of prompt
+
 
 
 void setup() {
   
-  /* pinMode CS,SCLK,DIN,DOUT,DRDY;                  */
-  pinMode(AD_CSPin,OUTPUT);
-  pinMode(AD_SCLKPin,OUTPUT);
-  pinMode(AD_DINPin,OUTPUT);
-  pinMode(AD_DOUTPin,INPUT);
-  pinMode(AD_DRDYPin,INPUT);
-
+  Serial.begin(115200);
   
+  SPI_initialize();
   
   ADS1120Manager_initialize();
   
 
   
-  Serial.begin(115200);
 
- 
 }// end of setup
 
 void loop()
 { 
   //Wait for DRDY to transition low;
-  
-  //Take CS low;
-  
-  //Delay;
-  delay(500);
-  //Send 16 SCLK rising edges to read out conversion data on DOUT;
-  
-  //Delay;
-  delay(500);
-  //Clear CS to high;
-  digitalWrite(AD_CSPin,HIGH); 
+  if (digitalRead(AD_DRDYPin)==LOW) 
+  {
+    //Take CS low;
+    digitalWrite(AD_CSPin,LOW);
+    //Delay;
+    delayMicroseconds(10);
+    //Send 16 SCLK rising edges to read out conversion data on DOUT;
+//    //Delay;
+//    delayMicroseconds(10);
+    //Clear CS to high;
+    digitalWrite(AD_CSPin,HIGH); 
+  }
   
 }// end of loop
+
+void SPI_initialize(){
+  
+  // Set up and start the SPI serial interface
+  SPI.begin();     //SCK, MOSI,SS (Output),SCK,MOSI == LOW ,SS == HIGH
+  SPI.setBitOrder(MSBFIRST); // Most significant bit first
+  SPI.setClockDivider(SPI_CLOCK_DIV2); // Step down the arduino clock by 2
+  SPI.setDataMode(SPI_MODE1); //Serial interface timing
+ 
+  /* pinMode CS,SCLK,DIN,DOUT,DRDY;                  */
+  pinMode(AD_CSPin,OUTPUT);
+  pinMode(AD_SCLKPin,OUTPUT);
+  pinMode(AD_MOSI,OUTPUT);
+  pinMode(AD_MISO,INPUT);
+  pinMode(AD_DRDYPin,INPUT);
+  
+  
+}
+
 
 void ADS1120Manager_initialize()
 {
@@ -59,7 +83,7 @@ void ADS1120Manager_initialize()
   //13)step
   //1) Power-up
   //2) Delay;
-  delay(5);//500ms
+  delayMicroseconds(10);//10us
   //3) Configure the SPI interface of the microcontroller to SPI mode 1 (CPOL = 0, CPHA = 1);
   
   /*
@@ -69,37 +93,37 @@ void ADS1120Manager_initialize()
   //4) Set CS to the device low;
   digitalWrite(AD_CSPin,LOW);
   //5) Delay;
-  delay(5);
+  delayMicroseconds(10);
   //6) Send the RESET command (06h) to make sure the device is properly reset after power-up;
-  AD_inputValue = B00000110;
-  analogWrite(AD_DINPin, AD_inputValue);
+  AD_MOSIValue = B00000110;
+  SPI.transfer(AD_MOSIValue);
   //7) Write the respective register configuration with the WREG command (43h, 08h, 04h, 10h, and 00h);
-    AD_inputValue = B01000011;//43h,beginWREG
-    analogWrite(AD_DINPin, AD_inputValue);
+    AD_MOSIValue = B01000011;//43h,beginWREG
+    SPI.transfer(AD_MOSIValue);
     //00h
-    AD_inputValue = B10000000;//80h,AINp=AIN0,AINn=AVSS;
-    analogWrite(AD_DINPin, AD_inputValue);
+    AD_MOSIValue = B10000000;//80h,AINp=AIN0,AINn=AVSS;
+    SPI.transfer(AD_MOSIValue);
     //01h
-    AD_inputValue = B11010100;//d4h,2KSPS,Turbo mode,Continuous conversion mode;
-    analogWrite(AD_DINPin, AD_inputValue);
+    AD_MOSIValue = B11010100;//d4h,2KSPS,Turbo mode,Continuous conversion mode;
+    SPI.transfer(AD_MOSIValue);
     //02h
-    AD_inputValue = B00000000;//00h,Internal 2.048-V reference selected ,No 50-Hz or 60-Hz rejection
-    analogWrite(AD_DINPin, AD_inputValue);
+    AD_MOSIValue = B00000000;//00h,Internal 2.048-V reference selected ,No 50-Hz or 60-Hz rejection
+    SPI.transfer(AD_MOSIValue);
     //03h
-    AD_inputValue = B00000000;//00h,Only the dedicated DRDY pin is used to indicate when data are ready
-    analogWrite(AD_DINPin, AD_inputValue);
+    AD_MOSIValue = B00000000;//00h,Only the dedicated DRDY pin is used to indicate when data are ready
+    SPI.transfer(AD_MOSIValue);
   //8) Delay;
-  delay(5);
+  delayMicroseconds(10);
   //9) As a sanity check, read back all configuration registers with the RREG command (23h);
-  AD_inputValue = B00100011;
-  analogWrite(AD_DINPin, AD_inputValue);
+  AD_MOSIValue = B00100011;
+  SPI.transfer(AD_MOSIValue);
   //10) Delay;
-  delay(5);
+  delayMicroseconds(10);
   //11) Send the START/SYNC command (08h) to start converting in continuous conversion mode;
-  AD_inputValue = B00001000;
-  analogWrite(AD_DINPin, AD_inputValue);
+  AD_MOSIValue = B00001000;
+  SPI.transfer(AD_MOSIValue);
   //12) Delay;
-  delay(5);
+  delayMicroseconds(10);
   //13) Clear CS to high (resets the serial interface);
   digitalWrite(AD_CSPin,HIGH);
   
@@ -110,15 +134,123 @@ void ADS1120Manager_end()
   //Take CS low;
   digitalWrite(AD_CSPin,LOW);
   //Delay;
-  delay(5);
+  delayMicroseconds(10);
   //Send the POWERDOWN command (02h) to stop conversions and put the device in power-down mode;
-  AD_inputValue = B00000010;
-  analogWrite(AD_DINPin, AD_inputValue);
+  AD_MOSIValue = B00000010;
+  SPI.transfer(AD_MOSIValue);
   //Delay;
-  delay(5);
+  delayMicroseconds(10);
   //Clear CS to high;
   digitalWrite(AD_CSPin,HIGH);
 }// end of ADS1120Manager_end
+
+
+boolean stopRunning(void) {
+  ADS1120Manager_stop();                    // stop the data acquisition
+  is_running = false;
+  return is_running;
+}
+
+boolean startRunning(int OUT_TYPE) {
+    outputType = OUT_TYPE;
+    ADS1120Manager_start();    //start the data acquisition
+    is_running = true;
+    return is_running;
+}
+
+/******************************************************************************
+ * function: ADS1120Manager_start()()
+ * introduction: configure and start conversion. starts SPI.
+ * parameters:
+ * defaulted to mode = 0, ADS1118 is set to convert the voltage of integrated temperature sensor.
+ * return value:
+*******************************************************************************/
+
+void ADS1120Manager_start(){
+	unsigned int temp;
+
+	
+
+	if(flag & BIT9)
+	{
+		temp = ADSCON_CH1 + ADS1118_TS;
+	}
+	else
+	{
+		temp = ADSCON_CH0 + ADS1118_TS;// temperature sensor mode.DR=8sps, PULLUP on DOUT
+	}
+
+	ADS_CS_LOW;
+
+	writeSPI(temp, 1);
+
+	ADS_CS_HIGH;
+
+	local_data = ADSread(1);
+	tracker = 0;
+}
+
+/**************************************************************
+ * function: WriteSPI(unsigned int config, int mode)
+ * introduction: write SPI to transmit the configuration parameter for ADS11118, and receive the convertion result.
+ * parameters: config: configuration parameter of ADS11118's register, mode (0/1): internal temperature sensor, far-end temperature
+ * return value: ADC result
+ */
+int ADS1118::writeSPI(unsigned int config, int mode){
+	int msb;
+	unsigned int temp;
+	char dummy;
+
+	SPI.setDataMode(1);
+	temp = config;
+	if (mode == 1)
+		temp = config | 0x8000;
+
+	msb = SPI.transfer(temp >> 8);
+	msb = (msb << 8) | SPI.transfer(temp & 0xFF);
+
+	dummy = SPI.transfer(temp >> 8);
+	dummy = SPI.transfer(temp & 0xFF);
+
+	return msb;
+}
+
+
+
+
+
+
+
+
+ADS1120Manager_stop(){
+
+
+
+
+}  
+
+
+ADS1120Manager_start(){
+  
+  
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
